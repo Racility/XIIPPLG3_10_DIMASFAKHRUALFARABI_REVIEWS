@@ -1,64 +1,65 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const db = require('../config/db');
+const db = require("../config/db");
 
-router.get( '/categories',(req, res) => {
-    db.query('SELECT * FROM kategori', (err, results) => {
-      if (err) {
-        res.status(500).json({ error: err.message }); // Jika terjadi error, kirim respons 500
-      } else {
-      // Cetak hasil query ke terminal untuk debugging
-      res.status(200).json(results); // Kirim hasil query sebagai JSON ke client
-      }
-    });
-  }),
+// GET all categories
+router.get("/categories", async (req, res) => {
+    try {
+        const [results] = await db.query("SELECT * FROM kategori");
+        res.status(200).json(results);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
-  router.post('/categories' ,(req, res) => {
+// POST new category
+router.post("/categories", async (req, res) => {
     const { nama } = req.body;
     if (!nama) {
-        return res.status(400).json({ error: "Nama is required" }); // Validasi rating
+        return res.status(400).json({ error: "Nama is required" });
     }
 
-    db.query(
-        "INSERT INTO kategori (nama) VALUES (?)",
-        [nama],
-        (err, result) => {
-            if (err) {
-                return res.status(500).json({ error: err.message }); // Tangani error database
-            }
-            res.status(201).json({ message: "Ulasan berhasil ditambahkan.", id: result.insertId }); // Kirim respons sukses dengan ID ulasan
+    try {
+        const [result] = await db.query("INSERT INTO kategori (nama) VALUES (?)", [nama]);
+        res.status(201).json({ message: "Category added", id: result.insertId });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PUT update category
+router.put("/categories/:id", async (req, res) => {
+    const { nama } = req.body;
+    const { id } = req.params;
+
+    if (!nama) {
+        return res.status(400).json({ error: "Nama is required" });
+    }
+
+    try {
+        const [result] = await db.query("UPDATE kategori SET nama = ? WHERE id = ?", [nama, id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Category not found" });
         }
-    );
-}),
-
-router.put('/categories/:id', (req, res) => {
-  const { nama } = req.body;
-  const { id } = req.params;
-
-  if (!nama) {
-    return res.status(400).json({ error: 'Nama is required' });
-  }
-
-  db.query('UPDATE kategori SET nama = ? WHERE id = ?', [nama, id], (err, results) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-    } else {
-      res.status(201).json({  message : 'Category Updated',id, nama});
+        res.status(200).json({ message: "Category updated", id, nama });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-  });
 });
 
-router.delete('/categories/:id', (req, res) => {
-  const { id } = req.params;
+// DELETE category
+router.delete("/categories/:id", async (req, res) => {
+    const { id } = req.params;
 
-  db.query('DELETE FROM kategori WHERE id = ?', [id], (err, results) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-    } else {
-      res.status(201).json({  message : 'Category Deleted',id});
+    try {
+        const [result] = await db.query("DELETE FROM kategori WHERE id = ?", [id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Category not found" });
+        }
+        res.status(200).json({ message: "Category deleted", id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-  });
 });
 
-
-module.exports = router
+module.exports = router;
